@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RetailPulse</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+:root{--bg:#f4f6fb;--card:#fff;--ink:#1c2340;--mut:#6b7390;--pri:#4f46e5;--side:#161b36}
+*{box-sizing:border-box}body{margin:0;font-family:Segoe UI,system-ui,sans-serif;background:var(--bg);color:var(--ink)}
+aside{position:fixed;inset:0 auto 0 0;width:220px;background:var(--side);color:#cdd2ee;padding:18px 12px;transition:.25s;z-index:5}
+aside h2{color:#fff;font-size:18px;margin:0 8px 2px}aside small{margin:0 8px 18px;display:block;font-size:11px}
+aside a{display:block;padding:11px 14px;border-radius:8px;cursor:pointer;margin-bottom:4px}
+aside a:hover,aside a.on{background:var(--pri);color:#fff}
+main{margin-left:220px;padding:20px}
+header{display:flex;align-items:center;gap:12px;margin-bottom:18px}header h1{font-size:20px;margin:0;flex:1}
+#burger{display:none;border:0;background:var(--pri);color:#fff;border-radius:8px;padding:8px 12px;font-size:18px}
+.badge{background:#fef3c7;color:#92400e;padding:4px 10px;border-radius:20px;font-size:12px}
+.grid{display:grid;gap:14px}.kpis{grid-template-columns:repeat(auto-fit,minmax(160px,1fr));margin-bottom:14px}
+.charts{grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}
+.card{background:var(--card);border-radius:14px;padding:16px;box-shadow:0 2px 10px #1c23400d;transition:.2s}
+.card:hover{transform:translateY(-3px);box-shadow:0 8px 20px #1c234018}
+.kpi b{display:block;font-size:22px;margin-top:4px}.kpi span{color:var(--mut);font-size:12px}
+.sec{display:none;animation:f .3s}.sec.on{display:block}@keyframes f{from{opacity:0;transform:translateY(8px)}}
+form{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+label{font-size:12px;color:var(--mut);text-transform:capitalize}
+input,select{width:100%;padding:10px;border:1px solid #d9deee;border-radius:8px;margin-top:4px;font-size:14px}
+button.go{grid-column:1/-1;padding:12px;border:0;border-radius:8px;background:var(--pri);color:#fff;font-weight:600;cursor:pointer}
+.res{margin-top:14px;font-size:15px}.res .big{font-size:30px;font-weight:700;color:var(--pri)}
+.bar{height:14px;background:#e5e8f5;border-radius:8px;overflow:hidden;margin-top:8px}.bar i{display:block;height:100%;transition:width .6s}
+.err{color:#b91c1c}ul{padding-left:18px;line-height:1.7}
+table{border-collapse:collapse}td,th{border:1px solid #d9deee;padding:10px 18px;text-align:center}
+@media(max-width:800px){aside{transform:translateX(-100%)}aside.open{transform:none}main{margin-left:0}#burger{display:block}}
+</style></head><body>
+<aside id="side"><h2>◉ RetailPulse</h2><small>RetailPulse Analytics Pvt. Ltd.</small>
+<a data-t="dash" class="on">📊 Dashboard</a><a data-t="sales">📈 Sales Prediction</a><a data-t="profit">💰 Profit Prediction</a>
+<a data-t="churn">👥 Customer Churn</a><a data-t="perf">🧪 Model Performance</a><a data-t="about">ℹ️ About Project</a></aside>
+<main><header><button id="burger">☰</button><h1 id="title">Dashboard</h1><span class="badge">DEMO DATA</span></header>
+
+<section class="sec on" id="dash"><div class="grid kpis" id="kpis"></div>
+<div class="card" style="margin-bottom:14px"><b>Business Insights</b><ul id="ins"></ul></div>
+<div class="grid charts" id="charts"></div></section>
+
+<section class="sec" id="sales"></section><section class="sec" id="profit"></section><section class="sec" id="churn"></section>
+
+<section class="sec" id="perf"><div class="grid charts" id="perfcards"></div></section>
+
+<section class="sec" id="about"><div class="card"><h3>RetailPulse – Sales, Profit &amp; Churn Prediction</h3>
+<p>Flask + scikit-learn web app. Three Random Forest models are trained on the CSV in <code>data/</code>; every metric shown is computed on a held-out 20% test set.</p>
+<p><b>Flow:</b> User → Web Interface → Flask → Pandas cleaning → ML models → Prediction → Dashboard.</p>
+<p>The bundled dataset is randomly generated DEMO DATA, not a real company's.</p></div></section></main>
+
+<script>
+const CATS=["Electronics","Clothing","Grocery","Furniture","Beauty"],REG=["North","South","East","West"];
+const F={sales:{t:"Sales Prediction",btn:"PREDICT SALES",f:[["product_category",CATS],["region",REG],["prev_sales",50000],["quantity",5],["month",6],["discount",.1]]},
+profit:{t:"Profit Prediction",btn:"PREDICT PROFIT",f:[["product_category",CATS],["region",REG],["sales",50000],["cost",35000],["discount",.1],["quantity",5],["prev_profit",12000]]},
+churn:{t:"Customer Churn",btn:"PREDICT CHURN",f:[["gender",["Male","Female"]],["customer_age",35],["total_orders",5],["total_spending",20000],["average_order_value",4000],["days_since_last_purchase",150],["complaints",2],["customer_tenure",12],["discount_usage",.1]]}};
+const inr=n=>"₹"+Number(n).toLocaleString("en-IN",{maximumFractionDigits:0});
+const nice=s=>s.replace(/_/g," ");
+// Build the three prediction forms
+for(const k in F){const d=F[k];document.getElementById(k).innerHTML=`<div class="card"><form id="f-${k}">`+d.f.map(([n,v])=>`<div><label>${nice(n)}</label>`+(Array.isArray(v)?`<select name="${n}">${v.map(o=>`<option>${o}</option>`).join("")}</select>`:`<input name="${n}" type="number" step="any" min="0" value="${v}" required>`)+`</div>`).join("")+`<button class="go">${d.btn}</button></form><div class="res" id="r-${k}"></div></div>`;
+document.getElementById("f-"+k).onsubmit=async e=>{e.preventDefault();const r=document.getElementById("r-"+k);
+const body=Object.fromEntries(new FormData(e.target));
+try{const res=await fetch("/predict-"+k,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});const j=await res.json();
+if(!res.ok)throw new Error(j.error);
+if(k=="churn"){const c=j.probability>=50?"#dc2626":"#16a34a";r.innerHTML=`<div class="big" style="color:${c}">${j.status}</div>Churn probability: <b>${j.probability}%</b><div class="bar"><i style="width:${j.probability}%;background:${c}"></i></div>`}
+else if(k=="profit"){const c={"High Profit":"#16a34a","Medium Profit":"#d97706","Low Profit":"#dc2626"}[j.level];r.innerHTML=`Predicted Profit<div class="big">${inr(j.prediction)}</div>Profit margin: <b>${j.margin}%</b> · <b style="color:${c}">● ${j.level}</b>`}
+else r.innerHTML=`Predicted Sales<div class="big">${inr(j.prediction)}</div><small>Random Forest estimate for ${body.product_category}, ${body.region}, month ${body.month}.</small>`}
+catch(x){r.innerHTML=`<span class="err">⚠ ${x.message||"Server error"}</span>`}}}
+// Navigation
+document.querySelectorAll("aside a").forEach(a=>a.onclick=()=>{document.querySelectorAll("aside a,.sec").forEach(x=>x.classList.remove("on"));a.classList.add("on");
+document.getElementById(a.dataset.t).classList.add("on");document.getElementById("title").textContent=a.textContent.slice(2);document.getElementById("side").classList.remove("open")});
+document.getElementById("burger").onclick=()=>document.getElementById("side").classList.toggle("open");
+// Dashboard
+const cols=["#4f46e5","#06b6d4","#f59e0b","#ef4444","#10b981","#8b5cf6"];
+function chart(title,type,data,opt={}){const c=document.createElement("div");c.className="card";c.innerHTML=`<b>${title}</b><canvas></canvas>`;document.getElementById("charts").append(c);
+new Chart(c.querySelector("canvas"),{type,data,options:{responsive:true,plugins:{legend:{display:data.datasets.length>1||["doughnut","pie"].includes(type)}},...opt}})}
+const ax=(x,y)=>({scales:{x:{title:{display:1,text:x}},y:{title:{display:1,text:y}}}});
+fetch("/api/dashboard").then(r=>r.json()).then(d=>{const k=d.kpi;
+document.getElementById("kpis").innerHTML=[["💵 Total Sales",inr(k.sales)],["💰 Total Profit",inr(k.profit)],["👥 Customers",k.customers],["🧾 Orders",k.orders],["🛒 Avg Order Value",inr(k.aov)],["⚠️ Churn Rate",k.churn.toFixed(1)+"%"]].map(([a,b])=>`<div class="card kpi"><span>${a}</span><b>${b}</b></div>`).join("");
+document.getElementById("ins").innerHTML=d.insights.map(i=>`<li>${i}</li>`).join("");
+const m=d.monthly,ds=(l,v,c,x={})=>({label:l,data:v,backgroundColor:c+"55",borderColor:c,tension:.3,...x}),bar=(g,l)=>({labels:g.labels,datasets:[ds(l,g.values,cols[0],{backgroundColor:cols})]});
+chart("Monthly Sales Trend","line",{labels:m.labels,datasets:[ds("Sales",m.sales,cols[0])]},ax("Month","Sales (₹)"));
+chart("Monthly Profit Trend","line",{labels:m.labels,datasets:[ds("Profit",m.profit,cols[4])]},ax("Month","Profit (₹)"));
+chart("Sales vs Profit","bar",{labels:m.labels,datasets:[ds("Sales",m.sales,cols[0],{type:"bar"}),ds("Profit",m.profit,cols[2],{type:"line"})]},ax("Month","₹"));
+chart("Customer Churn Distribution","doughnut",{labels:["Churned","Not Churned"],datasets:[{data:d.churn,backgroundColor:["#ef4444","#10b981"]}]});
+chart("Sales by Category","bar",bar(d.category_sales,"Sales"));chart("Profit by Category","bar",bar(d.category_profit,"Profit"));
+chart("Sales by Region","bar",bar(d.region_sales,"Sales"));
+chart("Top 10 Customers","bar",bar(d.top_customers,"Sales"),{indexAxis:"y"});
+chart("Orders by Month","line",{labels:m.labels,datasets:[ds("Orders",m.orders,cols[1],{fill:true})]},ax("Month","Orders"))});
+// Model performance (real metrics from models/metrics.json)
+fetch("/api/metrics").then(r=>r.json()).then(j=>{const box=document.getElementById("perfcards");
+for(const [n,m] of Object.entries(j)){const rows=Object.entries(m).filter(([k])=>k!="confusion").map(([k,v])=>`<tr><th>${k}</th><td>${k=="R2"||n=="churn"?v.toFixed(3):v.toFixed(1)}</td></tr>`).join("");
+let cm="";if(m.confusion){const c=m.confusion;cm=`<p><b>Confusion Matrix</b></p><table><tr><th></th><th>Pred 0</th><th>Pred 1</th></tr><tr><th>Actual 0</th><td>${c[0][0]}</td><td>${c[0][1]}</td></tr><tr><th>Actual 1</th><td>${c[1][0]}</td><td>${c[1][1]}</td></tr></table>`}
+box.insertAdjacentHTML("beforeend",`<div class="card"><b style="text-transform:capitalize">${n} model</b><table style="margin-top:8px">${rows}</table>${cm}</div>`)}});
+</script></body></html>
